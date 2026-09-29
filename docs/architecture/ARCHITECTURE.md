@@ -47,19 +47,27 @@ The core analytical pipeline is implemented in [AnomalyAuditor](../../agent/data
 
 ```mermaid
 graph TD
-    RAW[Raw Time-Series Telemetry CSV] --> L1[Layer 1: Data Availability & Coverage Gaps]
-    RAW --> L2[Layer 2: Thermodynamic Inconsistencies - Magnus-Tetens]
-    RAW --> L3[Layer 3: Sensor Stuck Plateaus & Corrupted Surges]
-    RAW --> L4[Layer 4: Sustained Regime Inefficiencies]
-    RAW --> L5[Layer 5: Cross-Variable Contradictions]
-    RAW --> L6[Layer 6: Local Rolling Baseline Spikes]
-    RAW --> L7[Layer 7: Peer Fleet Disagreements]
-    RAW --> L8[Layer 8: Multivariate Mahalanobis & Persistence Clustering]
+    RAW["Raw Time-Series Telemetry CSV"] --> L1["Layer 1: Data Availability & Coverage Gaps"]
+    RAW --> L2["Layer 2: Thermodynamic Inconsistencies (Magnus-Tetens)"]
+    RAW --> L3["Layer 3: Sensor Stuck Plateaus & Corrupted Surges"]
+    RAW --> L4["Layer 4: Sustained Regime Inefficiencies"]
+    RAW --> L5["Layer 5: Cross-Variable Contradictions"]
+    RAW --> L6["Layer 6: Local Rolling Baseline Spikes"]
+    RAW --> L7["Layer 7: Peer Fleet Disagreements"]
+    RAW --> L8["Layer 8: Multivariate Mahalanobis & Persistence Clustering"]
     
-    L1 & L2 & L3 & L4 & L5 & L6 & L7 & L8 --> FUSE[Multi-Signal Evidence Fusion]
-    FUSE --> CRITIC[Evidence Critic Zero-Trust Verification]
-    CRITIC --> DB[(SQLite Durable State Store)]
-    CRITIC --> UI[Desktop Triage & Investigation Console]
+    L1 --> FUSE["Multi-Signal Evidence Fusion"]
+    L2 --> FUSE
+    L3 --> FUSE
+    L4 --> FUSE
+    L5 --> FUSE
+    L6 --> FUSE
+    L7 --> FUSE
+    L8 --> FUSE
+
+    FUSE --> CRITIC["Evidence Critic Zero-Trust Verification"]
+    CRITIC --> DB[("SQLite Durable State Store")]
+    CRITIC --> UI["Desktop Triage & Investigation Console"]
 ```
 
 ### Layer 1: Data Availability Failures & Coverage Gaps

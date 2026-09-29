@@ -28,47 +28,48 @@
 
 ```mermaid
 graph TD
-    TELEMETRY[Raw Plant Telemetry CSV] --> DAEMON[Python Daemon Runtime - ipc_server.py :8766]
+    TELEMETRY["Raw Plant Telemetry CSV"] --> DAEMON["Python Daemon Runtime (ipc_server.py :8766)"]
     
     subgraph "Core Data & Anomaly Engine"
-        DAEMON --> AUDIT[AnomalyAuditor - anomaly_auditor.py]
-        AUDIT --> L1[1. Data Availability & Coverage Gaps]
-        AUDIT --> L2[2. Magnus-Tetens Psychrometric Bounds]
-        AUDIT --> L3[3. Sensor Stuck Plateaus & Repeated Surges]
-        AUDIT --> L4[4. Sustained Regime Inefficiencies]
-        AUDIT --> L5[5. Cross-Variable Contradictions]
-        AUDIT --> L6[6. Rolling Local Baseline Spikes]
-        AUDIT --> L7[7. Peer Fleet Disagreements]
-        AUDIT --> L8[8. Mahalanobis Scoring & Temporal Clustering]
+        DAEMON --> AUDIT["AnomalyAuditor (anomaly_auditor.py)"]
+        AUDIT --> L1["1. Data Availability & Coverage Gaps"]
+        AUDIT --> L2["2. Magnus-Tetens Psychrometric Bounds"]
+        AUDIT --> L3["3. Sensor Stuck Plateaus & Repeated Surges"]
+        AUDIT --> L4["4. Sustained Regime Inefficiencies"]
+        AUDIT --> L5["5. Cross-Variable Contradictions"]
+        AUDIT --> L6["6. Rolling Local Baseline Spikes"]
+        AUDIT --> L7["7. Peer Fleet Disagreements"]
+        AUDIT --> L8["8. Mahalanobis Scoring & Temporal Clustering"]
         
-        DAEMON --> ML[MLEngine - ml_engine.py]
-        ML --> RIDGE[Empirical Ridge Baseline: y = f(load, hydraulics, ambient)]
+        DAEMON --> ML["MLEngine (ml_engine.py)"]
+        ML --> RIDGE["Empirical Ridge Baseline: y = f(load, hydraulics, ambient)"]
         
-        AUDIT & ML --> CRITIC[EvidenceCritic - critic.py]
-        CRITIC --> FUSED[Validated Evidence Chains & Anomaly Records]
+        AUDIT --> CRITIC["EvidenceCritic (critic.py)"]
+        ML --> CRITIC
+        CRITIC --> FUSED["Validated Evidence Chains & Anomaly Records"]
     end
 
     subgraph "Autonomous Reasoning Subsystem"
-        DAEMON --> STREAMER[APIStreamer - api_streamer.py]
-        STREAMER <-->|HTTP/SSE Streaming :chat/completions| LLM[LLM: Ollama / OpenAI / OpenRouter]
-        STREAMER --> REACT[Multi-turn ReAct Loop]
-        REACT --> TOOLS[Analytical Tools: get_anomaly_audit, dataset_profile]
+        DAEMON --> STREAMER["APIStreamer (api_streamer.py)"]
+        STREAMER <-->|HTTP/SSE Streaming| LLM["LLM: Ollama / OpenAI / OpenRouter"]
+        STREAMER --> REACT["Multi-turn ReAct Loop"]
+        REACT --> TOOLS["Analytical Tools: get_anomaly_audit, dataset_profile"]
     end
 
     subgraph "Durable Storage"
-        FUSED --> DB[(SQLite WAL Store - .voide/state.db)]
+        FUSED --> DB[("SQLite WAL Store (.voide/state.db)")]
         REACT --> DB
     end
 
     subgraph "Desktop Presentation Shell"
-        DB <-->|Bidirectional WebSocket JSON IPC| UI[Flutter Desktop - voide_desktop]
-        UI --> SURF1[Overview: Fleet KPIs & Equipment Health]
-        UI --> SURF2[Dataset: Profiling & Missingness Distribution]
-        UI --> SURF3[Baseline: Regression Bounds & Residual Distributions]
-        UI --> SURF4[Triage: Evidence Cards & Decision Actions]
-        UI --> SURF5[Visuals: High-Resolution Residual Plots & Thermal Maps]
-        UI --> SURF6[Report: Markdown/HTML Engineering Audit Generator]
-        UI --> SURF7[Gateway: Real-Time API Model Switcher & Web Viewport]
+        DB <-->|WebSocket JSON IPC| UI["Flutter Desktop (voide_desktop)"]
+        UI --> SURF1["Overview: Fleet KPIs & Equipment Health"]
+        UI --> SURF2["Dataset: Profiling & Missingness Distribution"]
+        UI --> SURF3["Baseline: Regression Bounds & Residual Distributions"]
+        UI --> SURF4["Triage: Evidence Cards & Decision Actions"]
+        UI --> SURF5["Visuals: High-Resolution Residual Plots & Thermal Maps"]
+        UI --> SURF6["Report: Markdown/HTML Engineering Audit Generator"]
+        UI --> SURF7["Gateway: Real-Time API Model Switcher & Web Viewport"]
     end
 ```
 
