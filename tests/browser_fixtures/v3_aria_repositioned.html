@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>V.O.I.D.E. Fixture 3 - ARIA & Repositioned Controls</title>
+</head>
+<body>
+  <div role="application" aria-label="AI Chat Workspace">
+    <div class="view-panel">
+      <div role="log" aria-live="polite">
+        <p>System ready.</p>
+      </div>
+    </div>
+    <div class="composer-container">
+      <!-- Div-based rich text editor input using ARIA -->
+      <div role="textbox" contenteditable="true" aria-label="Enter your prompt message" class="editor-input">
+      </div>
+      <!-- Repositioned button into separate action bar -->
+      <div class="action-bar">
+        <button role="button" aria-label="Submit prompt to model" class="primary-submit">
+          <svg width="16" height="16" aria-hidden="true"><path d="M0 0h16v16H0z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

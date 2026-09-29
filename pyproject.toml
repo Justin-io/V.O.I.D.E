@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voide"
+version = "0.1.0"
+description = "Autonomous Multi-Layer Telemetry Anomaly Detection & Industrial Equipment Health Monitoring System"
+readme = "README.md"
+authors = [{ name = "V.O.I.D.E. Contributors" }]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["anomaly-detection", "telemetry", "industrial-iot", "equipment-health", "ashrae-14", "energy-monitoring", "ai-agent"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+    "websockets>=12.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+voide-daemon = "agent.runtime.ipc_server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["native*", "browser*", "agent*", "packages*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+extraPaths = ["."]
