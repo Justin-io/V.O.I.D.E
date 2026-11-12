@@ -1,1 +1,4 @@
-"""V.O.I.D.E. 2.0: industrial digital twin and predictive replay MVP."""
+from .cli import main
+
+if __name__ == "__main__":
+    main()
