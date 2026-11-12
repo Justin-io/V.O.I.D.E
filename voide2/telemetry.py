@@ -56,7 +56,7 @@ def validate_event(event: TelemetryEvent, asset: AssetSpec) -> TelemetryEvent:
 
 
 def read_csv_events(path: str | Path, asset: AssetSpec) -> list[TelemetryEvent]:
-    """Read CSV with columns event_time, asset_id, event_id and declared sensors."""
+    """Read rows for one asset from a shared multi-asset telemetry CSV."""
     rows: list[TelemetryEvent] = []
     source_path = Path(path)
     with source_path.open("r", encoding="utf-8", newline="") as handle:
@@ -70,6 +70,9 @@ def read_csv_events(path: str | Path, asset: AssetSpec) -> list[TelemetryEvent]:
         if unknown:
             raise TelemetryValidationError(f"unknown CSV columns: {sorted(unknown)}")
         for index, row in enumerate(reader):
+            asset_id = (row.get("asset_id") or "").strip()
+            if asset_id != asset.asset_id:
+                continue
             values: dict[str, float | None] = {}
             for sensor in asset.sensors:
                 raw = (row.get(sensor.name) or "").strip()
@@ -83,7 +86,7 @@ def read_csv_events(path: str | Path, asset: AssetSpec) -> list[TelemetryEvent]:
                             f"row {index + 2}: invalid numeric value for {sensor.name}"
                         ) from exc
             event = TelemetryEvent(
-                asset_id=(row.get("asset_id") or "").strip(),
+                asset_id=asset_id,
                 event_time=parse_event_time(row.get("event_time") or ""),
                 values=values,
                 event_id=(row.get("event_id") or f"csv-{index}").strip(),
@@ -99,7 +102,6 @@ def replay_events(
 ) -> Iterator[TelemetryEvent]:
     """Replay deterministically by event-time, then sequence, then event id.
 
-    Late-arriving data is reordered rather than mutating an already emitted twin.
     Streaming adapters should buffer according to a bounded-lateness policy before
     invoking this finite replay function.
     """
