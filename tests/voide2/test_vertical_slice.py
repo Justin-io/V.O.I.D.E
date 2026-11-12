@@ -1,17 +1,16 @@
 """V.O.I.D.E. 2.0 end-to-end and domain unit tests."""
 from __future__ import annotations
 
-import csv
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 
 from voide2.evaluation import asset_time_split, binary_metrics
-from voide2.models import predict_event
-from voide2.scenarios import MaintenanceScenario, rank_scenarios
+from voide2.monitoring import DriftMonitor, ingestion_quality
 from voide2.schema import AssetTwinState, TelemetryEvent, default_chiller_asset
+from voide2.scenarios import MaintenanceScenario, rank_scenarios
 from voide2.simulator import simulate, write_simulation
-from voide2.telemetry import TelemetryValidationError, read_csv_events, replay_events
+from voide2.telemetry import TelemetryValidationError, parse_event_time, read_csv_events, replay_events, validate_event
 from voide2.twin import AssetRegistry, DigitalTwin
 
 
@@ -33,12 +32,12 @@ def test_asset_wise_split_has_no_asset_leakage():
     assert {e.asset_id for e in train}.isdisjoint({e.asset_id for e in test})
     assert "asset_holdout=" in description
     assert min(e.event_time for e in train) <= max(e.event_time for e in train)
+    assert min(e.event_time for e in test) <= max(e.event_time for e in test)
 
 
 def test_replay_is_event_time_ordered_and_stable():
     events, _ = simulate(assets=2, hours=8, seed=12)
-    shuffled = list(reversed(events))
-    ordered = list(replay_events(shuffled))
+    ordered = list(replay_events(reversed(events)))
     assert ordered == sorted(events, key=lambda e: (e.event_time, e.sequence, e.event_id))
 
 
@@ -57,7 +56,8 @@ def test_csv_roundtrip_and_twin_idempotency(tmp_path):
     assert len(states) == len(parsed)
     state = twin.states[ids[0]]
     count = state.observation_count
-    twin.apply(parsed[0])
+    first = next(e for e in parsed if e.asset_id == ids[0])
+    twin.apply(first)
     assert state.observation_count == count
     assert state.last_event_time is not None
     assert state.rul_hours is not None
@@ -65,16 +65,8 @@ def test_csv_roundtrip_and_twin_idempotency(tmp_path):
 
 
 def test_naive_timestamp_is_rejected():
-    asset = default_chiller_asset()
-    event = TelemetryEvent(
-        asset_id=asset.asset_id,
-        event_time=datetime(2026, 1, 1),
-        values={"load_pct": 30.0},
-        event_id="bad",
-        source="test",
-    )
-    with pytest.raises(ValueError, match="timezone-aware"):
-        event.__post_init__()
+    with pytest.raises(TelemetryValidationError, match="timezone"):
+        parse_event_time("2026-01-01T00:00:00")
 
 
 def test_invalid_sensor_value_is_rejected():
@@ -86,23 +78,22 @@ def test_invalid_sensor_value_is_rejected():
         event_id="bad",
         source="test",
     )
-    from voide2.telemetry import validate_event
     with pytest.raises(TelemetryValidationError, match="unknown sensor"):
         validate_event(event, asset)
 
 
 def test_twin_rejects_time_regression():
     events, _ = simulate(assets=2, hours=8, seed=15)
-    registry = AssetRegistry()
     asset = default_chiller_asset(events[0].asset_id)
+    registry = AssetRegistry()
     registry.register(asset)
     twin = DigitalTwin(registry)
-    for event in events:
-        if event.asset_id == asset.asset_id:
-            twin.apply(event)
+    asset_events = sorted((e for e in events if e.asset_id == asset.asset_id), key=lambda e: e.event_time)
+    for event in asset_events:
+        twin.apply(event)
     late = TelemetryEvent(
         asset_id=asset.asset_id,
-        event_time=events[0].event_time,
+        event_time=asset_events[0].event_time,
         values={"load_pct": 40.0},
         event_id="late-new-event",
         source="test",
@@ -125,3 +116,17 @@ def test_binary_metrics_handles_single_class():
     metrics = binary_metrics([1, 1], [0.8, 0.7])
     assert metrics["pr_auc_average_precision"] is None
     assert metrics["brier_score"] >= 0
+
+
+def test_drift_monitor_requires_full_window_and_detects_shift():
+    monitor = DriftMonitor(reference_mean=0.0, reference_std=1.0, z_threshold=2, window_size=5)
+    for _ in range(4):
+        assert monitor.observe(4.0)["drift_detected"] is False
+    assert monitor.observe(4.0)["drift_detected"] is True
+
+
+def test_ingestion_quality_does_not_invent_lag():
+    events, _ = simulate(assets=2, hours=8, seed=19)
+    metrics = ingestion_quality(events)
+    assert metrics["event_count"] == len(events)
+    assert metrics["ingestion_lag_seconds_p95"] is None
