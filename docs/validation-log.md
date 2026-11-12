@@ -1,38 +1,38 @@
 # V.O.I.D.E. 2.0 Validation Log
 
 ## Execution boundary
-Changes were authored on GitHub branch `feature/voide-2-digital-twin` through the connected GitHub integration. No local shell, IDE or GUI session was exposed to this run. Therefore tests and benchmarks are **not claimed as executed**. The CI workflow added in this branch is the executable validation gate.
+Changes were authored through GitHub repository APIs on `feature/voide-2-digital-twin`. No local shell / IDE / GUI runtime was available, so pytest, compileall and the benchmark were not executed in this session. GitHub combined commit status currently reports no status checks for the latest observed PR head. The configured Actions workflow is present, but a passing run is not yet evidenced.
 
-## Repository reconnaissance
+## Reconnaissance
 - Repository: `Justin-io/V.O.I.D.E`
-- Default branch: `master`
-- Branches observed before change: `master` only
-- Latest commit observed: `f563066141372b4cc6ce8956547d178e9ed95ef2` (2026-09-29)
-- Existing runtime: Python, pandas, NumPy, scikit-learn, SQLite/WAL; Flutter desktop UI.
-- Existing tests refer to `datasets/development_dataset.csv`; README references a different dataset location.
-- Existing source and dataset files were not modified.
+- Base branch: `master`; existing branch history retained.
+- Latest base commit observed: `f563066141372b4cc6ce8956547d178e9ed95ef2` (2026-09-29).
+- Existing runtime: Python agent, pandas/NumPy/scikit-learn, SQLite/WAL, WebSocket IPC and Flutter Linux desktop.
+- Existing tests expect `datasets/development_dataset.csv`; README and tests historically referenced inconsistent dataset paths.
+- Existing V.O.I.D.E. 1.x source/data paths were not edited.
 
-## New validation suite
-Run from repository root:
+## Required local commands
+Run from repository root in an isolated Python 3.10+ venv:
 ```bash
 python -m pip install -e '.[dev]'
-python -m pytest -q tests/voide2
 python -m compileall -q voide2
-python -m voide2.cli demo --out artifacts/demo
+python -m pytest -q tests/voide2
+ruff check voide2 tests/voide2
+python -m voide2 demo --out artifacts/demo
 ```
 
 ## Test gates
 | Gate | Command | Status |
 |---|---|---|
-| Syntax | `python -m compileall -q voide2` | Not run in remote GitHub API environment |
-| Unit/integration | `python -m pytest -q tests/voide2` | Not run in remote GitHub API environment |
-| E2E demo | `python -m voide2.cli demo --out artifacts/demo` | Not run in remote GitHub API environment |
-| Existing 1.x tests | `python -m pytest -q` | Not run; dataset/runtime not available here |
-| Formatting | `ruff check voide2 tests/voide2` | CI planned |
-| Type checks | `mypy voide2` | Deferred |
+| Syntax | `python -m compileall -q voide2` | Not run locally |
+| Unit/integration | `python -m pytest -q tests/voide2` | Not run locally |
+| Lint | `ruff check voide2 tests/voide2` | Not run locally |
+| End-to-end | `python -m voide2 demo --out artifacts/demo` | Not run locally |
+| Existing 1.x suite | `python -m pytest -q` | Not run locally; existing dataset/runtime availability not inspected |
+| CI | GitHub Actions `V.O.I.D.E. 2.0 CI` | Workflow authored; successful run not verified |
 
 ## Measurements
-No performance or predictive quality numbers are reported because this execution had no runtime to generate them. The benchmark command writes actual synthetic metrics to JSON / CSV / Markdown when run. Synthetic degradation phase PR-AUC and Brier score are not physical failure PR-AUC. RUL MAE/RMSE, lead time and false alarms per operating hour remain unmeasured until a defensible target and event definition are supplied.
+No performance or predictive quality numbers are reported. The benchmark command writes metrics when it runs; no numbers are hard-coded. Synthetic degradation-phase PR-AUC and Brier score are not physical failure PR-AUC or calibration. RUL MAE/RMSE, early-warning lead time, false alarms per operating hour, unseen-regime validation and ingestion lag remain unmeasured.
 
 ## Host hardware
-Not observed. Do not infer CPU, RAM or accelerator from a previous workspace or profile.
+CPU, RAM and accelerators were not observed. Do not infer them from a profile or a previous execution.
