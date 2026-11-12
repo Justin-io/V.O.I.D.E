@@ -6,7 +6,6 @@ import statistics
 from collections import defaultdict
 from typing import Any, Iterable
 
-from .models import Prediction
 from .schema import TelemetryEvent
 
 
@@ -16,12 +15,12 @@ def asset_time_split(
     test_fraction: float = 0.2,
     seed: int = 42,
 ) -> tuple[list[TelemetryEvent], list[TelemetryEvent], str]:
-    """Hold out entire assets; time-ordered train/test within each asset.
+    """Hold out entire assets; never place one asset in both partitions.
 
-    Deterministically permutes asset IDs with seed, reserves at least one asset
-    for testing and one for training, and places each training asset entirely in
-    train. For remaining assets, the final temporal fraction is test only when
-    more than two assets are present. The returned description records policy.
+    Asset IDs are deterministically shuffled using seed. All observations from
+    selected test assets are held out. Event-time ordering is retained within
+    each partition. This evaluates unseen-asset generalization, not future-time
+    forecasting on known assets.
     """
     items = list(events)
     if len(items) < 2 or not 0.05 <= test_fraction <= 0.5:
@@ -32,7 +31,6 @@ def asset_time_split(
     assets = sorted(by_asset)
     if len(assets) < 2:
         raise ValueError("asset-wise split requires at least two distinct assets")
-    # Stable pseudo-random order avoids relying on input row order.
     import random
     random.Random(seed).shuffle(assets)
     n_test = max(1, min(len(assets) - 1, round(len(assets) * test_fraction)))
@@ -41,19 +39,12 @@ def asset_time_split(
     test: list[TelemetryEvent] = []
     for asset_id, rows in by_asset.items():
         rows.sort(key=lambda event: (event.event_time, event.sequence, event.event_id))
-        if asset_id in test_assets:
-            test.extend(rows)
-        elif len(assets) > 2:
-            cut = max(1, min(len(rows) - 1, int(len(rows) * (1 - test_fraction))))
-            train.extend(rows[:cut])
-            test.extend(rows[cut:])
-        else:
-            train.extend(rows)
+        (test if asset_id in test_assets else train).extend(rows)
     if not train or not test:
         raise ValueError("split produced an empty partition")
     return train, test, (
         f"seed={seed};asset_holdout={sorted(test_assets)};"
-        f"test_fraction={test_fraction};within_asset_temporal_holdout=True"
+        f"test_fraction={test_fraction};whole_asset_holdout=True"
     )
 
 
@@ -67,7 +58,7 @@ def regression_metrics(actual: list[float], predicted: list[float]) -> dict[str,
 
 
 def binary_metrics(labels: list[int], scores: list[float]) -> dict[str, float | None]:
-    """Compute PR-AUC by average precision and Brier score; None if one class absent."""
+    """Compute average precision and Brier score; None if one class is absent."""
     if not labels or len(labels) != len(scores):
         raise ValueError("labels and scores must be non-empty and same length")
     if any(label not in (0, 1) for label in labels):
@@ -80,8 +71,7 @@ def binary_metrics(labels: list[int], scores: list[float]) -> dict[str, float | 
         return {"pr_auc_average_precision": None, "brier_score": brier, "count": float(len(labels))}
     order = sorted(range(len(scores)), key=lambda index: scores[index], reverse=True)
     tp = fp = 0
-    ap = 0.0
-    previous_recall = 0.0
+    ap = previous_recall = 0.0
     for index in order:
         if labels[index]:
             tp += 1
@@ -90,11 +80,7 @@ def binary_metrics(labels: list[int], scores: list[float]) -> dict[str, float | 
             previous_recall = recall
         else:
             fp += 1
-    return {
-        "pr_auc_average_precision": ap,
-        "brier_score": brier,
-        "count": float(len(labels)),
-    }
+    return {"pr_auc_average_precision": ap, "brier_score": brier, "count": float(len(labels))}
 
 
 def split_summary(train: list[TelemetryEvent], test: list[TelemetryEvent]) -> dict[str, Any]:
